@@ -39,7 +39,11 @@ body{font-family:"Apple SD Gothic Neo","Malgun Gothic",sans-serif;background:#f5
 .cmt-ta{width:100%;border:1px solid #e0e0de;border-radius:8px;padding:.6rem .7rem;font-size:13px;line-height:1.65;color:#1a1a1a;font-family:inherit;resize:none;outline:none;min-height:52px;}
 .cmt-ta:focus{border-color:#999;}
 .dt-row{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500;}
-.dt-bdg{font-size:10px;background:#1a1a1a;color:#fff;border-radius:4px;padding:2px 7px;margin-left:auto;}
+.dt-input{border:1.5px solid #e2e2e2;border-radius:6px;padding:5px 9px;font-size:14px;font-family:inherit;font-weight:500;background:#fafafa;outline:none;}
+.dt-input:focus{border-color:#1a1a1a;background:#fff;}
+.dt-txt{font-size:13px;color:#666;}
+.dt-bdg{font-size:10px;background:#1a1a1a;color:#fff;border-radius:4px;padding:3px 8px;margin-left:auto;border:none;cursor:pointer;font-family:inherit;}
+.dt-bdg.past{background:#c2410c;}
 .field-lbl{font-size:12px;font-weight:600;color:#555;margin-bottom:.5rem;display:flex;align-items:center;gap:6px;}
 .field-lbl span{font-size:10px;color:#bbb;font-weight:400;}
 textarea{width:100%;border:1px solid #e0e0de;border-radius:8px;padding:.7rem;font-size:14px;line-height:1.75;color:#1a1a1a;font-family:inherit;resize:vertical;outline:none;background:#fff;}
@@ -168,7 +172,9 @@ textarea.short{min-height:64px;}
   <div class="card">
     <div class="dt-row">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <span id="dtTxt">-</span><span class="dt-bdg">오늘</span>
+      <input type="date" id="dtInput" class="dt-input" onchange="onDateChange()">
+      <span id="dtTxt" class="dt-txt">-</span>
+      <button type="button" class="dt-bdg" id="dtBdg" onclick="setToday()">오늘</button>
     </div>
   </div>
 
@@ -385,9 +391,21 @@ function getComments(){
 }
 
 /* ── Datetime ── */
-function getDs(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function todayIso(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function getDs(){var v=document.getElementById('dtInput').value;return v||todayIso();}
+function setToday(){document.getElementById('dtInput').value=todayIso();onDateChange();}
+function onDateChange(){
+  var ds=getDs(),t=todayIso();
+  var p=ds.split('-');var d=new Date(+p[0],+p[1]-1,+p[2]);
+  var days=['일','월','화','수','목','금','토'];
+  document.getElementById('dtTxt').textContent='('+days[d.getDay()]+')';
+  var b=document.getElementById('dtBdg');
+  if(ds===t){b.textContent='오늘';b.className='dt-bdg';}
+  else if(ds<t){b.textContent='과거 소급';b.className='dt-bdg past';}
+  else{b.textContent='미래';b.className='dt-bdg past';}
+}
 function getDtDisplay(){var d=new Date(),days=['일','월','화','수','목','금','토'],h=d.getHours(),m=d.getMinutes();return d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+days[d.getDay()]+') '+(h<12?'오전':'오후')+' '+(h%12||12)+':'+String(m).padStart(2,'0');}
-function tickDt(){document.getElementById('dtTxt').textContent=getDtDisplay();}
+function tickDt(){}
 
 /* ── Save ── */
 async function doSave(){
@@ -445,7 +463,7 @@ document.getElementById('clsSel').addEventListener('change',function(){onClassCh
 document.getElementById('saveBtn').addEventListener('click',doSave);
 
 /* ── Init ── */
-updateDot();tickDt();setInterval(tickDt,1000);
+updateDot();setToday();
 var ic=gc();
 if(!ic.pat)openCfg();
 else if(ic.stuBase&&ic.stuTbl)loadClasses(null);
