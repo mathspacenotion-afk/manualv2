@@ -21,6 +21,25 @@ body{font-family:"Apple SD Gothic Neo","Malgun Gothic",sans-serif;background:#f5
 .hdr-btn:hover{background:#ececea;}
 .main{max-width:660px;margin:0 auto;padding:1.25rem 1rem;}
 .card{background:#fff;border:1px solid #e8e8e5;border-radius:12px;padding:1.1rem 1.25rem;margin-bottom:.875rem;}
+.tabs{display:flex;gap:6px;margin-bottom:.875rem;background:#efefed;border-radius:10px;padding:4px;}
+.tab{flex:1;padding:.55rem;border:none;border-radius:8px;background:transparent;font-size:13px;font-weight:600;color:#888;cursor:pointer;font-family:inherit;}
+.tab.on{background:#fff;color:#1a1a1a;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.tab-pane{display:none;}
+.tab-pane.on{display:block;}
+.rec-item{border:1px solid #e8e8e5;border-radius:10px;padding:.75rem .9rem;margin-bottom:.5rem;cursor:pointer;background:#fff;}
+.rec-item:hover{border-color:#1a1a1a;}
+.rec-item.sel{border-color:#1a1a1a;background:#f7f7f5;}
+.rec-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.rec-date{font-size:13px;font-weight:600;color:#1a1a1a;}
+.rec-cls{font-size:11px;background:#1a1a1a;color:#fff;border-radius:4px;padding:2px 7px;}
+.rec-prev{font-size:12px;color:#777;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.edit-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;}
+.edit-ttl{font-size:14px;font-weight:700;}
+.btn-back{background:none;border:1px solid #ddd;border-radius:6px;color:#555;cursor:pointer;font-size:12px;padding:.3rem .7rem;font-family:inherit;}
+.filt-row{display:flex;gap:8px;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;}
+.filt-row input[type=date]{border:1.5px solid #e2e2e2;border-radius:6px;padding:5px 9px;font-size:13px;font-family:inherit;background:#fafafa;}
+.filt-row select{border:1.5px solid #e2e2e2;border-radius:6px;padding:5px 9px;font-size:13px;font-family:inherit;background:#fafafa;}
+.muted{font-size:12px;color:#999;padding:.5rem 0;}
 .clbl{font-size:10px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.75rem;}
 .sel-row{display:flex;gap:8px;}
 .sel-row select{flex:1;height:40px;padding:0 10px;border:1px solid #e0e0de;border-radius:8px;font-size:14px;color:#1a1a1a;background:#fff;font-family:inherit;cursor:pointer;}
@@ -168,6 +187,12 @@ textarea.short{min-height:64px;}
     <div class="att-count" id="attCount"></div>
   </div>
 
+  <div class="tabs">
+    <button class="tab on" id="tabNew" onclick="switchTab('new')">새 기록 작성</button>
+    <button class="tab" id="tabEdit" onclick="switchTab('edit')">기록 수정</button>
+  </div>
+
+  <div class="tab-pane on" id="paneNew">
   <!-- 날짜 -->
   <div class="card">
     <div class="dt-row">
@@ -204,6 +229,36 @@ textarea.short{min-height:64px;}
 
   <button class="save-btn" id="saveBtn">에어테이블 저장</button>
   <div id="result"></div>
+  </div><!-- /paneNew -->
+
+  <div class="tab-pane" id="paneEdit">
+    <div class="card" id="editList">
+      <div class="field-lbl">수업 기록(근무일지) 최근 기록 <span>클릭해서 수정</span></div>
+      <div class="filt-row">
+        <input type="date" id="efFrom"><span style="font-size:12px;color:#999">~</span><input type="date" id="efTo">
+        <select id="efCls"><option value="">전체 반</option></select>
+        <button class="btn-s" id="efLoad" onclick="loadRecords()">불러오기</button>
+      </div>
+      <div id="recList"><div class="muted">기간을 정하고 불러오기를 누르세요.</div></div>
+    </div>
+
+    <div class="card" id="editForm" style="display:none">
+      <div class="edit-hdr">
+        <div class="edit-ttl" id="editTtl">기록 수정</div>
+        <button class="btn-back" onclick="closeEdit()">목록으로</button>
+      </div>
+      <div class="field-lbl">수업일시</div>
+      <input type="date" id="eDate" class="dt-input" style="margin-bottom:.9rem">
+      <div class="field-lbl">수업 내용</div>
+      <textarea class="tall" id="eLesson"></textarea>
+      <div class="field-lbl" style="margin-top:.9rem">개별 코멘트(특이사항)</div>
+      <textarea class="tall" id="eComment"></textarea>
+      <div class="field-lbl" style="margin-top:.9rem">다음 수업 계획</div>
+      <textarea class="short" id="eNext"></textarea>
+      <button class="save-btn" id="editSaveBtn" onclick="saveEdit()" style="margin-top:1rem">수정 저장</button>
+      <div id="editResult"></div>
+    </div>
+  </div><!-- /paneEdit -->
 </div>
 
 <script>
@@ -449,6 +504,90 @@ async function doSave(){
     show('result','<div class="err-box">저장 오류: '+esc(e.message)+'<small>에어테이블 필드 타입을 확인해주세요 (모두 일반 텍스트)</small></div>');
   }
   btn.disabled=false;btn.textContent='에어테이블 저장';
+}
+
+/* ── 기록 수정 (수업 기록(근무일지) 테이블) ── */
+var LOG_BASE='appxMMBoetYF4u2eO', LOG_TBL='tblricZCtZsMdibXS', CLS_TBL='tbl4H2KDmJP0gVniY';
+var LF={date:'fld19rmWbyJhwrI4b',cls:'fld8DNfmCLhVVf278',lesson:'fld4YlOAIY2jXqfcE',comment:'fldDdQPzkWsftHJNh',next:'fldYM8ZqJIfVkCxFr'};
+var editRecs=[], editCur=null, clsMap={};
+
+function switchTab(t){
+  document.getElementById('tabNew').className='tab'+(t==='new'?' on':'');
+  document.getElementById('tabEdit').className='tab'+(t==='edit'?' on':'');
+  document.getElementById('paneNew').className='tab-pane'+(t==='new'?' on':'');
+  document.getElementById('paneEdit').className='tab-pane'+(t==='edit'?' on':'');
+  if(t==='edit'&&!document.getElementById('efFrom').value){
+    var to=todayIso(),d=new Date();d.setDate(d.getDate()-14);
+    var from=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    document.getElementById('efFrom').value=from;document.getElementById('efTo').value=to;
+    loadClsMap();
+  }
+}
+async function loadClsMap(){
+  var c=gc();if(!c.pat)return;
+  try{
+    var d=await atFetch('/'+LOG_BASE+'/'+CLS_TBL+'?fields%5B%5D='+encodeURIComponent('반 이름')+'&pageSize=100');
+    clsMap={};var sel=document.getElementById('efCls');sel.innerHTML='<option value="">전체 반</option>';
+    (d.records||[]).forEach(function(r){var n=r.fields['반 이름'];if(n){clsMap[r.id]=n;var o=document.createElement('option');o.value=r.id;o.textContent=n;sel.appendChild(o);}});
+  }catch(e){}
+}
+async function loadRecords(){
+  var c=gc();if(!c.pat){openCfg();return;}
+  var from=document.getElementById('efFrom').value,to=document.getElementById('efTo').value,cid=document.getElementById('efCls').value;
+  if(!from||!to){alert('기간을 선택하세요');return;}
+  var list=document.getElementById('recList');list.innerHTML='<div class="muted">불러오는 중...</div>';
+  var btn=document.getElementById('efLoad');btn.disabled=true;
+  try{
+    var f='AND(IS_AFTER({수업일시},DATEADD("'+from+'",-1,"day")),IS_BEFORE({수업일시},DATEADD("'+to+'",1,"day")))';
+    var recs=[],off='';
+    do{
+      var url='/'+LOG_BASE+'/'+LOG_TBL+'?filterByFormula='+encodeURIComponent(f)+'&pageSize=100&sort%5B0%5D%5Bfield%5D='+encodeURIComponent('수업일시')+'&sort%5B0%5D%5Bdirection%5D=desc'+(off?'&offset='+off:'');
+      var d=await atFetch(url);recs=recs.concat(d.records||[]);off=d.offset||'';
+    }while(off);
+    if(cid)recs=recs.filter(function(r){var v=r.fields['반'];return Array.isArray(v)&&v.indexOf(cid)!==-1;});
+    editRecs=recs;
+    if(!recs.length){list.innerHTML='<div class="muted">해당 기간 기록이 없습니다.</div>';btn.disabled=false;return;}
+    list.innerHTML=recs.map(function(r,i){
+      var v=r.fields['반'];var cn=Array.isArray(v)&&v.length?(clsMap[v[0]]||v[0]):'-';
+      var prev=(r.fields['수업 내용']||'').replace(/\n/g,' ').slice(0,60);
+      return '<div class="rec-item" onclick="openEdit('+i+')"><div class="rec-top"><span class="rec-date">'+esc(r.fields['수업일시']||'')+'</span><span class="rec-cls">'+esc(cn)+'</span></div><div class="rec-prev">'+esc(prev)+'</div></div>';
+    }).join('');
+  }catch(e){list.innerHTML='<div class="err-box">오류: '+esc(e.message)+'</div>';}
+  btn.disabled=false;
+}
+function openEdit(i){
+  var r=editRecs[i];if(!r)return;editCur=r;
+  var v=r.fields['반'];var cn=Array.isArray(v)&&v.length?(clsMap[v[0]]||v[0]):'-';
+  document.getElementById('editTtl').textContent='기록 수정 — '+cn;
+  document.getElementById('eDate').value=r.fields['수업일시']||'';
+  document.getElementById('eLesson').value=r.fields['수업 내용']||'';
+  document.getElementById('eComment').value=r.fields['개별 코멘트(특이사항)']||'';
+  document.getElementById('eNext').value=r.fields['다음 수업 계획']||'';
+  document.getElementById('editResult').innerHTML='';
+  document.getElementById('editList').style.display='none';
+  document.getElementById('editForm').style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function closeEdit(){
+  editCur=null;
+  document.getElementById('editForm').style.display='none';
+  document.getElementById('editList').style.display='block';
+}
+async function saveEdit(){
+  if(!editCur)return;
+  var btn=document.getElementById('editSaveBtn');btn.disabled=true;btn.textContent='저장 중...';
+  var fields={};
+  fields['수업일시']=document.getElementById('eDate').value;
+  fields['수업 내용']=document.getElementById('eLesson').value;
+  fields['개별 코멘트(특이사항)']=document.getElementById('eComment').value;
+  fields['다음 수업 계획']=document.getElementById('eNext').value;
+  try{
+    await atFetch('/'+LOG_BASE+'/'+LOG_TBL+'/'+editCur.id,'PATCH',{fields:fields});
+    document.getElementById('editResult').innerHTML='<div class="res-ok"><div class="res-hdr">&#10003;&nbsp;수정 완료</div></div>';
+    editCur.fields=Object.assign({},editCur.fields,fields);
+    setTimeout(function(){closeEdit();loadRecords();},900);
+  }catch(e){document.getElementById('editResult').innerHTML='<div class="err-box">수정 오류: '+esc(e.message)+'</div>';}
+  btn.disabled=false;btn.textContent='수정 저장';
 }
 
 /* ── Event Listeners ── */
